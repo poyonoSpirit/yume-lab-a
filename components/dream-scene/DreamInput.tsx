@@ -5,16 +5,18 @@ import { FormEvent, useState } from "react";
 
 type DreamInputProps = {
   // DreamSceneから受け取る送信処理ぽよん
-  onSubmit: (text: string) => void;
+  onSubmit: (text: string) => Promise<boolean>;
+  isSending: boolean;
 };
 
 export default function DreamInput({
   onSubmit,
+  isSending,
 }: DreamInputProps) {
   // 現在入力されている文字を保存するぽよん
   const [text, setText] = useState("");
 
-  const handleSubmit = (
+  const handleSubmit = async (
     event: FormEvent<HTMLFormElement>
   ) => {
     // ページ再読み込みを防ぐぽよん
@@ -23,13 +25,12 @@ export default function DreamInput({
     const trimmed = text.trim();
 
     // 空文字は送らないぽよん
-    if (!trimmed) return;
+    if (!trimmed || isSending) return;
 
     // DreamSceneへ文字列を渡すぽよん
-    onSubmit(trimmed);
-
-    // 入力欄を空に戻すぽよん
-    setText("");
+    if (await onSubmit(trimmed)) {
+      setText("");
+    }
   };
 
   return (
@@ -38,25 +39,41 @@ export default function DreamInput({
       style={{
         position: "absolute",
         left: "50%",
-        bottom: "32px",
+        bottom: "max(24px, env(safe-area-inset-bottom))",
+        width: "min(560px, calc(100% - 32px))",
+        display: "flex",
+        gap: "8px",
         transform: "translateX(-50%)",
         zIndex: 30,
       }}
     >
       <input
+        aria-label="Geminiへ送るメッセージ"
+        disabled={isSending}
         autoFocus
         value={text}
         onChange={(event) => setText(event.target.value)}
         placeholder="夢に話しかける..."
         style={{
-          width: "320px",
+          flex: 1,
+          minWidth: 0,
+          color: "#302449",
           padding: "12px 20px",
           borderRadius: "9999px",
           border: "none",
-          outline: "none",
-          background: "rgba(255, 255, 255, 0.3)",
+          background: "rgba(255, 255, 255, 0.9)",
         }}
       />
+      <button
+        type="submit"
+        disabled={isSending || !text.trim()}
+        style={{
+          padding: "12px 20px", borderRadius: "9999px", border: "none",
+          background: "#e4d6ff", color: "#302449",
+          cursor: isSending || !text.trim() ? "not-allowed" : "pointer",
+          opacity: isSending || !text.trim() ? 0.65 : 1,
+        }}
+      >{isSending ? "送信中…" : "送信"}</button>
     </form>
   );
 }
